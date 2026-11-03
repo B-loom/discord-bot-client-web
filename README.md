@@ -1,5 +1,7 @@
 # Discord Bot Client Web
 
+**En ligne : <https://b-loom.github.io/discord-bot-client-web/>**
+
 Un client Discord pour **bot**, qui tourne entierement dans le navigateur.
 Tu colles le token de ton bot, et tu te connectes au Gateway Discord : serveurs,
 salons, evenements en direct.
@@ -61,8 +63,8 @@ python -m http.server 5173
 
 ## Deployer
 
-Le depot est un site statique : `Settings` > `Pages` > `Deploy from a branch`,
-branche `main`, dossier `/ (root)`. Le fichier `.nojekyll` est deja present.
+Le depot est un site statique, deja publie par GitHub Pages depuis `main`
+a la racine (`.nojekyll` est present). Chaque push sur `main` redeploie.
 
 ---
 
