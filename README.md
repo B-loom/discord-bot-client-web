@@ -1,3 +1,5 @@
+# PAS ENCORE FINI NE PAS UTILISER ! ⚠️
+
 # Discord Bot Client Web
 
 **En ligne : <https://b-loom.github.io/discord-bot-client-web/>**
