@@ -50,6 +50,8 @@ export class Store {
   selectedChannelId = null;
 
   #listeners = new Set();
+  #pending = new Set();
+  #flushHandle = null;
 
   /** S abonne aux changements. Retourne la fonction de desabonnement. */
   subscribe(handler) {
@@ -57,12 +59,29 @@ export class Store {
     return () => this.#listeners.delete(handler);
   }
 
-  /** Notifie les abonnes d un changement cible. */
+  /**
+   * Signale un changement. Les notifications sont regroupees jusqu a la
+   * prochaine frame : a la connexion, un bot sur cent serveurs recoit cent
+   * GUILD_CREATE d affilee et ne doit pas redessiner la liste cent fois.
+   */
   emit(scope) {
-    for (const handler of this.#listeners) handler(scope);
+    this.#pending.add(scope);
+    if (this.#flushHandle !== null) return;
+
+    this.#flushHandle = requestAnimationFrame(() => {
+      this.#flushHandle = null;
+      const scopes = [...this.#pending];
+      this.#pending.clear();
+      for (const handler of this.#listeners) {
+        for (const pendingScope of scopes) handler(pendingScope);
+      }
+    });
   }
 
   reset() {
+    if (this.#flushHandle !== null) cancelAnimationFrame(this.#flushHandle);
+    this.#flushHandle = null;
+    this.#pending.clear();
     this.me = null;
     this.application = null;
     this.guilds.clear();
