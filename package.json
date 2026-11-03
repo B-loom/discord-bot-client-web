@@ -1,0 +1,19 @@
+{
+  "name": "discord-bot-client-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Client Discord pour bot, dans le navigateur. Connexion avec un token de bot, sans extension ni serveur.",
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes serve . -l 5173",
+    "start": "npm run dev"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "client",
+    "gateway",
+    "web"
+  ],
+  "license": "MIT"
+}

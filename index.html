@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discord Bot Client Web</title>
+<meta name="description" content="Connecte-toi a Discord avec un token de bot, directement dans le navigateur.">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-screen="login">
+
+<!-- ===================== ECRAN DE CONNEXION ===================== -->
+<main id="login-screen" class="login">
+  <form id="login-form" class="login__card" autocomplete="off">
+    <header class="login__head">
+      <img class="login__logo" src="assets/icon.svg" alt="" width="56" height="56">
+      <h1 class="login__title">Discord Bot Client</h1>
+      <p class="login__sub">Connecte-toi avec le token de ton bot. Rien n'est envoye ailleurs que chez Discord.</p>
+    </header>
+
+    <label class="field">
+      <span class="field__label">Token du bot</span>
+      <div class="field__row">
+        <input id="token" class="field__input" type="password" name="token" spellcheck="false" autocomplete="new-password"
+               placeholder="MTEx...  (Developer Portal &rsaquo; Bot &rsaquo; Reset Token)" required>
+        <button id="token-toggle" class="btn btn--ghost btn--icon" type="button" title="Afficher / masquer" aria-label="Afficher le token">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/></svg>
+        </button>
+      </div>
+      <small class="field__hint">Le token donne un controle total sur le bot. Ne le partage jamais.</small>
+    </label>
+
+    <fieldset class="field">
+      <legend class="field__label">Intents du Gateway</legend>
+      <div class="intents" id="intents"></div>
+      <small class="field__hint">
+        <strong>Message Content</strong> et <strong>Server Members</strong> sont des intents privilegies :
+        active-les d'abord dans le Developer Portal, sinon la connexion est refusee (code 4014).
+      </small>
+    </fieldset>
+
+    <label class="check">
+      <input id="remember" type="checkbox">
+      <span>Garder le token dans ce navigateur (localStorage)</span>
+    </label>
+
+    <button id="login-btn" class="btn btn--primary btn--block" type="submit">Se connecter</button>
+
+    <p id="login-error" class="alert" hidden></p>
+
+    <footer class="login__foot">
+      <span class="tag">v1.0.0</span>
+      <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer">Developer Portal</a>
+    </footer>
+  </form>
+</main>
+
+<!-- ===================== CLIENT ===================== -->
+<div id="client" class="app" hidden>
+
+  <!-- Barre laterale : serveurs -->
+  <nav class="rail" aria-label="Serveurs">
+    <div class="rail__list" id="guild-rail"></div>
+  </nav>
+
+  <!-- Colonne : salons -->
+  <aside class="sidebar">
+    <header class="sidebar__head">
+      <h2 class="sidebar__title" id="guild-name">Aucun serveur</h2>
+      <span class="sidebar__meta" id="guild-meta"></span>
+    </header>
+    <div class="sidebar__scroll" id="channel-list">
+      <p class="empty">Selectionne un serveur a gauche.</p>
+    </div>
+    <footer class="me" id="me">
+      <img class="me__avatar" id="me-avatar" alt="" width="36" height="36">
+      <div class="me__text">
+        <strong class="me__name" id="me-name">-</strong>
+        <span class="me__id" id="me-id">-</span>
+      </div>
+      <button id="logout-btn" class="btn btn--ghost btn--icon" type="button" title="Se deconnecter" aria-label="Se deconnecter">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M10 17v-2h4V9h-4V7l-6 5 6 5Zm3-14h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6v-2h6V5h-6V3Z"/></svg>
+      </button>
+    </footer>
+  </aside>
+
+  <!-- Zone principale -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar__left">
+        <span class="hash" aria-hidden="true">#</span>
+        <strong id="channel-name">connexion</strong>
+      </div>
+      <div class="topbar__right">
+        <span class="pill" id="status-pill"><i class="dot"></i><span id="status-text">Hors ligne</span></span>
+        <span class="pill" id="ping-pill" title="Latence du heartbeat">-- ms</span>
+        <button id="reconnect-btn" class="btn btn--ghost" type="button">Reconnecter</button>
+      </div>
+    </header>
+
+    <div class="panes">
+      <!-- Vue connexion / diagnostic -->
+      <section class="pane" id="pane-connection">
+        <div class="cards">
+          <article class="card">
+            <h3 class="card__title">Session</h3>
+            <dl class="kv">
+              <dt>Etat</dt><dd id="d-state">-</dd>
+              <dt>Session ID</dt><dd id="d-session" class="mono">-</dd>
+              <dt>Resume URL</dt><dd id="d-resume" class="mono">-</dd>
+              <dt>Sequence</dt><dd id="d-seq" class="mono">-</dd>
+              <dt>Heartbeat</dt><dd id="d-heartbeat">-</dd>
+              <dt>Latence</dt><dd id="d-ping">-</dd>
+            </dl>
+          </article>
+
+          <article class="card">
+            <h3 class="card__title">Bot</h3>
+            <dl class="kv">
+              <dt>Nom</dt><dd id="d-bot">-</dd>
+              <dt>ID</dt><dd id="d-bot-id" class="mono">-</dd>
+              <dt>Application</dt><dd id="d-app" class="mono">-</dd>
+              <dt>API Gateway</dt><dd id="d-gw-version" class="mono">-</dd>
+              <dt>Shard</dt><dd id="d-shard" class="mono">-</dd>
+              <dt>Serveurs</dt><dd id="d-guilds">0</dd>
+            </dl>
+          </article>
+
+          <article class="card">
+            <h3 class="card__title">Intents actifs</h3>
+            <div id="d-intents" class="chips"></div>
+          </article>
+        </div>
+
+        <section class="log">
+          <header class="log__head">
+            <h3 class="card__title">Evenements du Gateway</h3>
+            <div class="log__tools">
+              <input id="log-filter" class="field__input field__input--sm" type="search" placeholder="Filtrer (ex: MESSAGE_CREATE)">
+              <label class="check check--inline"><input id="log-autoscroll" type="checkbox" checked><span>Suivre</span></label>
+              <button id="log-clear" class="btn btn--ghost" type="button">Vider</button>
+            </div>
+          </header>
+          <ol class="log__list" id="log-list"></ol>
+        </section>
+      </section>
+
+      <!-- Vue salon -->
+      <section class="pane" id="pane-channel" hidden>
+        <ol class="messages" id="messages"></ol>
+        <p class="note">
+          Les messages arrivent en direct via le Gateway. L'historique et l'envoi ne sont pas dans la 1.0.0.
+        </p>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script type="module" src="assets/js/app.js"></script>
+</body>
+</html>
