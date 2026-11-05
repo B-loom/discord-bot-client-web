@@ -220,6 +220,10 @@ export function renderGuilds(store, onSelect, onHome) {
       btn.textContent = initials(guild.name);
     }
 
+    if (store.guildHasUnread(guild.id) && guild.id !== store.selectedGuildId) {
+      btn.classList.add('guild--unread');
+    }
+
     btn.addEventListener('click', () => onSelect(guild.id));
     el.guildRail.append(btn);
   }
@@ -269,6 +273,14 @@ export function renderChannels(store, onSelect) {
     name.textContent = channel.name;
 
     btn.append(icon, name);
+
+    if (store.unread.has(channel.id) && channel.id !== store.selectedChannelId) {
+      btn.classList.add('chan--unread');
+      const badge = document.createElement('span');
+      badge.className = 'chan__unread';
+      btn.append(badge);
+    }
+
     btn.addEventListener('click', () => onSelect(channel.id));
     el.channelList.append(btn);
   }

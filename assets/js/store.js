@@ -46,6 +46,7 @@ export class Store {
   application = null;
   guilds = new Map();
   messages = new Map();
+  unread = new Set();
   selectedGuildId = null;
   selectedChannelId = null;
 
@@ -86,8 +87,27 @@ export class Store {
     this.application = null;
     this.guilds.clear();
     this.messages.clear();
+    this.unread.clear();
     this.selectedGuildId = null;
     this.selectedChannelId = null;
+  }
+
+  /** Premier serveur qui a au moins un salon textuel. */
+  firstGuildWithTextChannel() {
+    for (const guild of this.sortedGuilds()) {
+      if (this.textChannels(guild.id).length) return guild.id;
+    }
+    return null;
+  }
+
+  /** Un salon de ce serveur a-t-il des messages non lus ? */
+  guildHasUnread(guildId) {
+    const guild = this.guilds.get(guildId);
+    if (!guild) return false;
+    for (const channelId of guild.channels.keys()) {
+      if (this.unread.has(channelId)) return true;
+    }
+    return false;
   }
 
   /* -------------------------------- serveurs ------------------------------ */
@@ -233,7 +253,16 @@ export class Store {
     list.push(message);
     if (list.length > MAX_MESSAGES_PER_CHANNEL) list.shift();
     this.messages.set(message.channel_id, list);
-    if (message.channel_id === this.selectedChannelId) this.emit('messages');
+
+    if (message.channel_id === this.selectedChannelId) {
+      this.emit('messages');
+    } else {
+      // Message dans un salon non ouvert : on le marque non lu pour que
+      // l utilisateur voie ou ca se passe (pastille sur le salon/serveur).
+      this.unread.add(message.channel_id);
+      this.emit('guilds');
+      this.emit('channels');
+    }
   }
 
   channelMessages(channelId) {
@@ -246,12 +275,18 @@ export class Store {
     this.selectedGuildId = guildId;
     const first = this.textChannels(guildId)[0];
     this.selectedChannelId = first?.id ?? null;
+    if (this.selectedChannelId) this.unread.delete(this.selectedChannelId);
     this.emit('selection');
+    this.emit('channels');
+    this.emit('guilds');
   }
 
   selectChannel(channelId) {
     this.selectedChannelId = channelId;
+    this.unread.delete(channelId);
     this.emit('selection');
+    this.emit('channels');
+    this.emit('guilds');
   }
 
   /** Repasse sur la vue connexion / diagnostic. */

@@ -11,6 +11,20 @@ let gateway = null;
 let activeIntents = 0;
 let hasGuildsIntent = false;
 let sessionTicker = null;
+let autoOpened = false;
+
+/**
+ * Ouvre automatiquement le premier salon du premier serveur, une seule fois
+ * apres la connexion : l utilisateur atterrit directement dans un salon au
+ * lieu de l ecran de diagnostic, et voit donc les messages en direct.
+ */
+function tryAutoOpen() {
+  if (autoOpened || store.selectedChannelId || store.selectedGuildId) return;
+  const guildId = store.firstGuildWithTextChannel();
+  if (!guildId) return;
+  autoOpened = true;
+  store.selectGuild(guildId);
+}
 
 /* ================================ demarrage =============================== */
 
@@ -243,6 +257,7 @@ function logout() {
   gateway = null;
   api = null;
   activeIntents = 0;
+  autoOpened = false;
   store.reset();
   session.clearToken();
   ui.clearLog();
@@ -275,11 +290,13 @@ function onDispatch({ t, d }) {
       }
       ui.renderSession(gateway, d);
       for (const guild of d.guilds) store.upsertGuild(guild);
+      tryAutoOpen();
       break;
 
     case 'GUILD_CREATE':
     case 'GUILD_UPDATE':
       store.upsertGuild(d);
+      tryAutoOpen();
       break;
 
     case 'GUILD_DELETE':

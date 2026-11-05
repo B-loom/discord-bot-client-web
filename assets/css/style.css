@@ -290,7 +290,18 @@ a:hover { text-decoration: underline; }
 .chan:hover { background: var(--bg-hover); color: var(--text-2); }
 .chan.is-active { background: var(--bg-active); color: #fff; }
 .chan__icon { color: var(--text-3); flex: none; }
-.chan__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chan__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.chan--unread { color: var(--text-0); font-weight: 600; }
+.chan--unread .chan__icon { color: var(--text-0); }
+.chan__unread { width: 8px; height: 8px; border-radius: 50%; background: #fff; flex: none; }
+
+/* pastille non-lu sur l icone de serveur */
+.guild--unread::after {
+  content: ""; position: absolute; left: -16px; top: 50%;
+  width: 8px; height: 8px; border-radius: 50%; background: #fff;
+  transform: translateY(-50%);
+}
+.guild--unread:hover::before, .guild--unread.is-active::before { height: 0; }
 
 .me { display: flex; align-items: center; gap: 8px; padding: 8px 8px; background: var(--bg-elevated); }
 .me__avatar { border-radius: 50%; background: var(--bg-active); flex: none; }
