@@ -95,9 +95,25 @@ export class Store {
   upsertGuild(guild) {
     const existing = this.guilds.get(guild.id);
     const channels = existing?.channels ?? new Map();
+    const members = existing?.members ?? new Map();
 
     for (const channel of guild.channels ?? []) channels.set(channel.id, channel);
     for (const thread of guild.threads ?? []) channels.set(thread.id, thread);
+
+    // Membres et presences fournis par GUILD_CREATE (si l intent Server Members
+    // est actif). Les presences portent le statut (online / idle / dnd).
+    for (const m of guild.members ?? []) {
+      if (!m.user) continue;
+      const prev = members.get(m.user.id);
+      members.set(m.user.id, { user: m.user, nick: m.nick ?? prev?.nick ?? null, status: prev?.status ?? 'offline' });
+    }
+    for (const p of guild.presences ?? []) {
+      const id = p.user?.id;
+      if (!id) continue;
+      const prev = members.get(id) ?? { user: p.user, nick: null, status: 'offline' };
+      prev.status = p.status ?? prev.status;
+      members.set(id, prev);
+    }
 
     this.guilds.set(guild.id, {
       id: guild.id,
@@ -106,9 +122,54 @@ export class Store {
       unavailable: guild.unavailable === true,
       memberCount: guild.member_count ?? existing?.memberCount ?? null,
       channels,
+      members,
     });
 
     this.emit('guilds');
+    if ((guild.members?.length ?? 0) || (guild.presences?.length ?? 0)) this.emit('members');
+  }
+
+  /* -------------------------------- membres ------------------------------- */
+
+  upsertMember(guildId, member) {
+    const guild = this.guilds.get(guildId);
+    const id = member?.user?.id;
+    if (!guild || !id) return;
+    if (!guild.members) guild.members = new Map();
+    const prev = guild.members.get(id);
+    guild.members.set(id, {
+      user: member.user ?? prev?.user,
+      nick: member.nick ?? prev?.nick ?? null,
+      status: prev?.status ?? 'offline',
+    });
+    this.emit('members');
+  }
+
+  removeMember(guildId, userId) {
+    const guild = this.guilds.get(guildId);
+    if (!guild?.members || !userId) return;
+    guild.members.delete(userId);
+    this.emit('members');
+  }
+
+  setPresence(guildId, userId, status, user) {
+    const guild = this.guilds.get(guildId);
+    if (!guild || !userId) return;
+    if (!guild.members) guild.members = new Map();
+    const prev = guild.members.get(userId);
+    if (prev) prev.status = status ?? prev.status;
+    else if (user) guild.members.set(userId, { user, nick: null, status: status ?? 'offline' });
+    this.emit('members');
+  }
+
+  /** Membres d un serveur, en ligne d abord puis par nom. */
+  guildMembers(guildId) {
+    const guild = this.guilds.get(guildId);
+    if (!guild?.members) return [];
+    const order = { online: 0, idle: 1, dnd: 2, offline: 3 };
+    const name = (m) => (m.nick || m.user?.global_name || m.user?.username || '').toLowerCase();
+    return [...guild.members.values()].sort((a, b) =>
+      (order[a.status] ?? 3) - (order[b.status] ?? 3) || name(a).localeCompare(name(b)));
   }
 
   removeGuild(id) {

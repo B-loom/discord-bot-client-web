@@ -39,6 +39,8 @@ export const el = {
   paneConnection: $('pane-connection'),
   paneChannel: $('pane-channel'),
   messages: $('messages'),
+  memberList: $('member-list'),
+  composerInput: $('composer-input'),
 
   logList: $('log-list'),
   logFilter: $('log-filter'),
@@ -281,8 +283,12 @@ export function renderPane(store) {
 
   const channel = store.selectedChannelId ? store.channel(store.selectedChannelId) : null;
   el.channelName.textContent = channel?.name ?? 'connexion';
+  if (el.composerInput) el.composerInput.placeholder = channel ? `Envoyer un message dans #${channel.name}` : 'Envoyer un message';
 
-  if (onChannel) renderMessages(store);
+  if (onChannel) {
+    renderMessages(store);
+    renderMembers(store);
+  }
 }
 
 export function renderMessages(store) {
@@ -290,12 +296,90 @@ export function renderMessages(store) {
   el.messages.textContent = '';
 
   if (!list.length) {
-    el.messages.append(emptyNote('Aucun message recu depuis la connexion. Ecris dans ce salon pour le voir arriver en direct.'));
+    el.messages.append(emptyNote('Aucun message recu depuis la connexion. Les nouveaux messages de ce salon arrivent en direct via le Gateway.'));
     return;
   }
 
   for (const message of list) el.messages.append(messageRow(message));
-  el.paneChannel.scrollTop = el.paneChannel.scrollHeight;
+  el.messages.scrollTop = el.messages.scrollHeight;
+}
+
+/* -------------------------------- membres --------------------------------- */
+
+const STATUS_LABELS = { online: 'En ligne', idle: 'Inactif', dnd: 'Ne pas deranger', offline: 'Hors ligne' };
+
+export function renderMembers(store) {
+  if (!el.memberList) return;
+  el.memberList.textContent = '';
+
+  if (!store.selectedChannelId) return;
+
+  const members = store.guildMembers(store.selectedGuildId);
+  const guild = store.guilds.get(store.selectedGuildId);
+
+  if (!members.length) {
+    const hint = document.createElement('p');
+    hint.className = 'members__hint';
+    hint.textContent = guild?.memberCount
+      ? `${guild.memberCount} membres. Active l'intent « Server Members » (Options avancees + Developer Portal) pour les afficher.`
+      : 'Active l\'intent « Server Members » pour afficher la liste des membres.';
+    el.memberList.append(hint);
+    return;
+  }
+
+  const online = members.filter((m) => m.status && m.status !== 'offline');
+  const offline = members.filter((m) => !m.status || m.status === 'offline');
+
+  if (online.length) {
+    el.memberList.append(memberGroup(`En ligne - ${online.length}`, online));
+  }
+  if (offline.length) {
+    el.memberList.append(memberGroup(`Hors ligne - ${offline.length}`, offline));
+  }
+}
+
+function memberGroup(title, members) {
+  const frag = document.createDocumentFragment();
+
+  const heading = document.createElement('p');
+  heading.className = 'cat members__cat';
+  heading.textContent = title;
+  frag.append(heading);
+
+  for (const member of members) {
+    const row = document.createElement('div');
+    row.className = 'member';
+    if (member.status === 'offline' || !member.status) row.classList.add('member--off');
+
+    const avatarWrap = document.createElement('div');
+    avatarWrap.className = 'member__avatar';
+    const avatar = document.createElement('img');
+    avatar.src = userAvatarUrl(member.user, 32);
+    avatar.alt = '';
+    avatarWrap.append(avatar);
+    const dot = document.createElement('i');
+    dot.className = 'member__dot';
+    dot.dataset.status = member.status || 'offline';
+    dot.title = STATUS_LABELS[member.status] ?? 'Hors ligne';
+    avatarWrap.append(dot);
+
+    const name = document.createElement('span');
+    name.className = 'member__name';
+    name.textContent = member.nick || member.user?.global_name || member.user?.username || 'Inconnu';
+
+    if (member.user?.bot) {
+      const badge = document.createElement('span');
+      badge.className = 'msg__bot';
+      badge.textContent = 'bot';
+      name.append(' ');
+      name.append(badge);
+    }
+
+    row.append(avatarWrap, name);
+    frag.append(row);
+  }
+
+  return frag;
 }
 
 function messageRow(message) {

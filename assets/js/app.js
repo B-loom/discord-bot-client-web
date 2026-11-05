@@ -60,6 +60,7 @@ function wireStore() {
     }
     if (scope === 'selection') ui.renderPane(store);
     if (scope === 'messages') ui.renderMessages(store);
+    if (scope === 'members' || scope === 'selection' || scope === 'guilds') ui.renderMembers(store);
   });
 }
 
@@ -88,11 +89,21 @@ async function login(token) {
     const application = await api.application().catch(() => null);
     const gatewayInfo = await api.gatewayBot().catch(() => null);
 
-    // 2. Quels intents privilegies sont reellement autorises ?
-    //    Sans les flags de l application (REST bloque), on retire par securite
-    //    les intents privilegies pour garantir une connexion sans 4014.
+    // 2. Quels intents envoyer ?
+    //    - Si on a pu lire les flags de l application (REST joignable), on
+    //      retire les intents privilegies non autorises pour eviter un 4014.
+    //    - Sinon (REST bloque par CORS, cas normal en navigateur), on fait
+    //      CONFIANCE a la selection : l utilisateur coche Server Members /
+    //      Message Content s il les a actives dans le Developer Portal. En cas
+    //      d erreur, Discord ferme avec 4014 et le message l explique.
     const requestedKeys = ui.selectedIntentKeys();
-    const { keys, blocked } = allowedIntents(requestedKeys, application?.flags ?? 0);
+    let keys, blocked;
+    if (application) {
+      ({ keys, blocked } = allowedIntents(requestedKeys, application.flags ?? 0));
+    } else {
+      keys = requestedKeys;
+      blocked = [];
+    }
     activeIntents = intentMask(keys);
     hasGuildsIntent = keys.includes('GUILDS');
 
@@ -148,6 +159,22 @@ async function login(token) {
         text: `${intent?.label ?? key} ignore : l intent n est pas active dans le Developer Portal. Sans ca Discord refuserait la connexion (4014).`,
         at: Date.now(),
       });
+    }
+
+    // REST bloque : on n a pas pu verifier les flags. Si des intents privilegies
+    // sont demandes, on previent que Discord peut fermer en 4014 s ils ne sont
+    // pas actives dans le Developer Portal.
+    if (!application) {
+      const priv = requestedKeys.filter((k) => INTENTS.find((i) => i.key === k)?.privileged);
+      if (priv.length) {
+        const labels = priv.map((k) => INTENTS.find((i) => i.key === k)?.label ?? k).join(', ');
+        ui.appendLog({
+          kind: 'warn',
+          name: 'INTENTS',
+          text: `Intents privilegies demandes (${labels}). Ils doivent etre actives dans le Developer Portal, sinon Discord ferme la connexion (4014).`,
+          at: Date.now(),
+        });
+      }
     }
 
     if (gatewayInfo && gatewayInfo.shards > 1) {
@@ -273,6 +300,19 @@ function onDispatch({ t, d }) {
     case 'THREAD_CREATE':
     case 'THREAD_UPDATE':
       store.upsertChannel(d);
+      break;
+
+    case 'GUILD_MEMBER_ADD':
+    case 'GUILD_MEMBER_UPDATE':
+      store.upsertMember(d.guild_id, d);
+      break;
+
+    case 'GUILD_MEMBER_REMOVE':
+      store.removeMember(d.guild_id, d.user?.id);
+      break;
+
+    case 'PRESENCE_UPDATE':
+      if (d.guild_id) store.setPresence(d.guild_id, d.user?.id, d.status, d.user);
       break;
 
     case 'MESSAGE_CREATE':

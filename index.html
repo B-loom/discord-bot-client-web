@@ -168,11 +168,15 @@
       </section>
 
       <!-- Vue salon -->
-      <section class="pane" id="pane-channel" hidden>
-        <ol class="messages" id="messages"></ol>
-        <p class="note">
-          Les messages arrivent en direct via le Gateway. L'historique et l'envoi ne sont pas dans la 1.0.0.
-        </p>
+      <section class="pane pane--channel" id="pane-channel" hidden>
+        <div class="chat">
+          <ol class="messages" id="messages"></ol>
+          <div class="composer">
+            <input id="composer-input" class="composer__input" type="text" placeholder="Envoyer un message" disabled>
+            <small class="composer__hint">L'envoi de messages n'est pas possible depuis un navigateur (l'API REST de Discord bloque les requetes des bots par CORS). Les messages recus s'affichent en direct.</small>
+          </div>
+        </div>
+        <aside class="members" id="member-list" aria-label="Membres"></aside>
       </section>
     </div>
   </main>

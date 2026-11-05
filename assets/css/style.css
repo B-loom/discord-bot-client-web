@@ -329,6 +329,61 @@ a:hover { text-decoration: underline; }
 .panes { min-height: 0; overflow: hidden; }
 .pane { height: 100%; overflow-y: auto; padding: 18px; }
 
+/* vue salon : chat a gauche, membres a droite (facon Discord) */
+.pane--channel { display: flex; padding: 0; overflow: hidden; }
+.chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.chat .messages { flex: 1; overflow-y: auto; padding: 18px 16px 8px; }
+.composer { padding: 0 16px 20px; }
+.composer__input {
+  width: 100%;
+  background: #383a40;
+  border: 0;
+  border-radius: 8px;
+  padding: 11px 15px;
+  color: var(--text-1);
+  outline: none;
+}
+.composer__input::placeholder { color: var(--text-3); }
+.composer__input:disabled { cursor: not-allowed; }
+.composer__hint { display: block; margin-top: 7px; font-size: 11px; color: var(--text-3); line-height: 1.4; }
+
+/* liste des membres */
+.members {
+  width: 240px; flex: none;
+  background: var(--bg-sidebar);
+  overflow-y: auto;
+  padding: 16px 8px;
+}
+.members__cat { margin-top: 8px; }
+.members__cat:first-child { margin-top: 0; }
+.members__hint { color: var(--text-3); font-size: 12px; line-height: 1.5; padding: 4px 8px; margin: 0; }
+.member {
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 8px; border-radius: var(--radius-sm);
+  cursor: default;
+}
+.member:hover { background: var(--bg-hover); }
+.member--off { opacity: .4; }
+.member__avatar { position: relative; width: 32px; height: 32px; flex: none; }
+.member__avatar img { width: 32px; height: 32px; border-radius: 50%; background: var(--bg-active); display: block; }
+.member__dot {
+  position: absolute; right: -2px; bottom: -2px;
+  width: 11px; height: 11px; border-radius: 50%;
+  border: 3px solid var(--bg-sidebar); box-sizing: content-box;
+  background: var(--text-3);
+}
+.member__dot[data-status="online"] { background: var(--ok); }
+.member__dot[data-status="idle"]   { background: var(--warn); }
+.member__dot[data-status="dnd"]    { background: var(--bad); }
+.member__name {
+  font-size: 15px; font-weight: 500; color: var(--text-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+}
+.member:hover .member__name { color: var(--text-1); }
+
+@media (max-width: 1024px) { .members { display: none; } }
+
 /* cartes de diagnostic */
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(265px, 1fr)); gap: 14px; }
 .card { background: var(--bg-sidebar); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
