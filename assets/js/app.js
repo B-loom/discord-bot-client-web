@@ -77,18 +77,24 @@ async function login(token) {
   try {
     api = new DiscordApi(token);
 
-    // 1. Le token est-il valide ?
-    const me = await api.me();
+    // L API REST de Discord n envoie PAS d en-tetes CORS pour les bots : dans
+    // un navigateur normal, ces requetes sont bloquees. On les traite donc
+    // comme optionnelles (best-effort). Ce n est pas grave : c est le Gateway
+    // (WebSocket, non soumis au CORS) qui valide reellement le token via la
+    // fermeture 4004, et l identite du bot arrive dans l evenement READY.
+
+    // 1. Informations optionnelles via REST (ignorees si bloquees).
+    const me = await api.me().catch(() => null);
+    const application = await api.application().catch(() => null);
+    const gatewayInfo = await api.gatewayBot().catch(() => null);
 
     // 2. Quels intents privilegies sont reellement autorises ?
-    const application = await api.application().catch(() => null);
+    //    Sans les flags de l application (REST bloque), on retire par securite
+    //    les intents privilegies pour garantir une connexion sans 4014.
     const requestedKeys = ui.selectedIntentKeys();
     const { keys, blocked } = allowedIntents(requestedKeys, application?.flags ?? 0);
     activeIntents = intentMask(keys);
     hasGuildsIntent = keys.includes('GUILDS');
-
-    // 3. Ou se connecter, et reste-t-il des sessions disponibles ?
-    const gatewayInfo = await api.gatewayBot();
 
     // Memorisation des preferences.
     session.saveIntents(requestedKeys);
@@ -100,7 +106,7 @@ async function login(token) {
     store.application = application;
 
     ui.showScreen('client');
-    ui.renderMe(me);
+    if (me) ui.renderMe(me);
     ui.renderApplication(application);
     ui.renderActiveIntents(activeIntents);
     ui.renderStatus('connecting');
@@ -108,20 +114,31 @@ async function login(token) {
     ui.renderChannels(store, (id) => store.selectChannel(id));
     ui.renderPane(store);
 
-    ui.appendLog({
-      kind: 'ok',
-      name: 'TOKEN',
-      text: `Token valide pour ${me.username} (${me.id}).`,
-      at: Date.now(),
-    });
+    if (me) {
+      ui.appendLog({
+        kind: 'ok',
+        name: 'TOKEN',
+        text: `Token valide pour ${me.username} (${me.id}).`,
+        at: Date.now(),
+      });
+    } else {
+      ui.appendLog({
+        kind: 'info',
+        name: 'REST',
+        text: 'API REST Discord injoignable depuis le navigateur (CORS) : connexion via le Gateway. Le token sera valide a l identification, l identite du bot arrivera avec READY.',
+        at: Date.now(),
+      });
+    }
 
-    const limit = gatewayInfo.session_start_limit;
-    ui.appendLog({
-      kind: 'info',
-      name: 'GATEWAY/BOT',
-      text: `${gatewayInfo.url} - ${gatewayInfo.shards} shard(s) recommande(s), ${limit.remaining}/${limit.total} sessions restantes.`,
-      at: Date.now(),
-    });
+    const limit = gatewayInfo?.session_start_limit;
+    if (gatewayInfo && limit) {
+      ui.appendLog({
+        kind: 'info',
+        name: 'GATEWAY/BOT',
+        text: `${gatewayInfo.url} - ${gatewayInfo.shards} shard(s) recommande(s), ${limit.remaining}/${limit.total} sessions restantes.`,
+        at: Date.now(),
+      });
+    }
 
     for (const key of blocked) {
       const intent = INTENTS.find((i) => i.key === key);
@@ -133,7 +150,7 @@ async function login(token) {
       });
     }
 
-    if (gatewayInfo.shards > 1) {
+    if (gatewayInfo && gatewayInfo.shards > 1) {
       ui.appendLog({
         kind: 'warn',
         name: 'SHARDING',
@@ -142,9 +159,11 @@ async function login(token) {
       });
     }
 
-    startGateway(token, gatewayInfo.url);
+    // Sans gatewayInfo (REST bloque), le Gateway utilise son URL par defaut.
+    startGateway(token, gatewayInfo?.url);
 
-    if (!hasGuildsIntent) await loadGuildsFromRest();
+    // La liste REST des serveurs n a de sens que si le REST est joignable.
+    if (!hasGuildsIntent && me) await loadGuildsFromRest();
   } catch (err) {
     api = null;
     ui.showLoginError(describeError(err));
@@ -211,6 +230,22 @@ function logout() {
 function onDispatch({ t, d }) {
   switch (t) {
     case 'READY':
+      // Quand le REST est bloque (CORS), l identite du bot n a pas pu etre
+      // chargee avant : on la recupere ici, dans le payload READY.
+      if (!store.me && d.user) {
+        store.me = d.user;
+        ui.renderMe(d.user);
+        ui.appendLog({
+          kind: 'ok',
+          name: 'TOKEN',
+          text: `Token valide : connecte en tant que ${d.user.username} (${d.user.id}).`,
+          at: Date.now(),
+        });
+      }
+      if (!store.application && d.application) {
+        store.application = d.application;
+        ui.renderApplication(d.application);
+      }
       ui.renderSession(gateway, d);
       for (const guild of d.guilds) store.upsertGuild(guild);
       break;

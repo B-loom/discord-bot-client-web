@@ -129,7 +129,12 @@ export function renderMe(user) {
 }
 
 export function renderApplication(app) {
-  el.d.app.textContent = app ? `${app.name} (${app.id})` : 'indisponible';
+  if (!app) {
+    el.d.app.textContent = 'indisponible';
+    return;
+  }
+  // Via READY (REST bloque), l application n a pas de nom, seulement un id.
+  el.d.app.textContent = app.name ? `${app.name} (${app.id})` : app.id;
 }
 
 export function renderStatus(state, detail) {

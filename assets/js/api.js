@@ -30,9 +30,11 @@ export class ApiError extends Error {
 /**
  * Client REST minimal.
  *
- * L API REST de Discord renvoie les en-tetes CORS en reflechissant l Origin et
- * autorise l en-tete Authorization : les appels partent donc directement du
- * navigateur, sans extension ni proxy.
+ * ATTENTION : l API REST de Discord n envoie PAS d en-tetes CORS pour les
+ * requetes de bot. Depuis un navigateur, ces appels sont donc bloques et
+ * rejetes (TypeError). Ils sont ici tous best-effort : la connexion ne depend
+ * jamais d eux. L authentification reelle et l identite du bot passent par le
+ * Gateway (WebSocket), qui lui n est pas soumis au CORS.
  */
 export class DiscordApi {
   #token;
