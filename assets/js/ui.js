@@ -140,7 +140,10 @@ export function renderApplication(app) {
 export function renderStatus(state, detail) {
   el.statusPill.dataset.state = state;
   el.statusText.textContent = STATE_LABELS[state] ?? state;
-  el.d.state.textContent = detail ? `${STATE_LABELS[state] ?? state} - ${detail}` : (STATE_LABELS[state] ?? state);
+  const label = STATE_LABELS[state] ?? state;
+  // `detail` n est affiche que si c est un texte (ex: "Nouvelle tentative dans 5s").
+  const note = typeof detail === 'string' ? detail : null;
+  el.d.state.textContent = note ? `${label} - ${note}` : label;
 }
 
 export function renderPing(ms) {

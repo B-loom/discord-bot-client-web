@@ -12,11 +12,27 @@
 
 <!-- ===================== ECRAN DE CONNEXION ===================== -->
 <main id="login-screen" class="login">
+  <div class="login__art" aria-hidden="true">
+    <span class="art-sun"></span>
+    <span class="art-cloud art-cloud--1"></span>
+    <span class="art-cloud art-cloud--2"></span>
+    <span class="art-hill art-hill--2"></span>
+    <span class="art-hill art-hill--3"></span>
+    <span class="art-hill art-hill--1"></span>
+    <span class="art-ground"></span>
+  </div>
+
+  <a class="brand" href="./" aria-label="Bot Client">
+    <span class="brand__mark">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7v1.5A2.5 2.5 0 0 0 3 13v3a2.5 2.5 0 0 0 2.5 2.5H6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2h.5A2.5 2.5 0 0 0 21 16v-3a2.5 2.5 0 0 0-2-2.45V9a7 7 0 0 0-7-7Zm-2.5 9a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm5 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/></svg>
+    </span>
+    Bot Client
+  </a>
+
   <form id="login-form" class="login__card" autocomplete="off">
     <header class="login__head">
-      <img class="login__logo" src="assets/icon.svg" alt="" width="56" height="56">
-      <h1 class="login__title">Discord Bot Client</h1>
-      <p class="login__sub">Connecte-toi avec le token de ton bot. Rien n'est envoye ailleurs que chez Discord.</p>
+      <h1 class="login__title">Ha, te revoila !</h1>
+      <p class="login__sub">Nous sommes si heureux de te revoir !</p>
     </header>
 
     <label class="field">
@@ -31,23 +47,28 @@
       <small class="field__hint">Le token donne un controle total sur le bot. Ne le partage jamais.</small>
     </label>
 
-    <fieldset class="field">
-      <legend class="field__label">Intents du Gateway</legend>
-      <div class="intents" id="intents"></div>
-      <small class="field__hint">
-        <strong>Message Content</strong> et <strong>Server Members</strong> sont des intents privilegies :
-        active-les d'abord dans le Developer Portal, sinon la connexion est refusee (code 4014).
-      </small>
-    </fieldset>
-
-    <label class="check">
-      <input id="remember" type="checkbox">
-      <span>Garder le token dans ce navigateur (localStorage)</span>
-    </label>
-
     <button id="login-btn" class="btn btn--primary btn--block" type="submit">Se connecter</button>
 
     <p id="login-error" class="alert" hidden></p>
+
+    <details class="advanced">
+      <summary>Options avancees</summary>
+      <div class="advanced__body">
+        <fieldset class="field">
+          <legend class="field__label">Intents du Gateway</legend>
+          <div class="intents" id="intents"></div>
+          <small class="field__hint">
+            <strong>Message Content</strong> et <strong>Server Members</strong> sont des intents privilegies :
+            active-les d'abord dans le Developer Portal, sinon la connexion est refusee (code 4014).
+          </small>
+        </fieldset>
+
+        <label class="check">
+          <input id="remember" type="checkbox">
+          <span>Garder le token dans ce navigateur (localStorage)</span>
+        </label>
+      </div>
+    </details>
 
     <footer class="login__foot">
       <span class="tag">v1.0.0</span>
